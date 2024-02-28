@@ -82,6 +82,7 @@ class PlaylistManagement(commands.Cog, name='Playlist management'):
                     if (message.author.id in spotify_bot_ids) and (not self.command_waiting.empty()):
                         self.waiting_tasks[0].cancel()
                         logged_id = self.command_waiting.get_nowait()
+                        log.info(f'Track {url} assigned to {logged_id} rather than bot ID {message.author.id}')
                     else:
                         logged_id = message.author.id
                     track_added = self.bot.manager.add_to_playlist(logged_id, url)
@@ -117,7 +118,7 @@ class PlaylistManagement(commands.Cog, name='Playlist management'):
     async def clear_waiting(self): 
         # don't pop if we successfully popped above
         if self.waiting_tasks[0].is_being_cancelled():
-            log.debug('Timeout canceled, link found')
+            log.info('Timeout canceled, link found')
             del self.waiting_tasks[0]
             return
         # remove from the queue if we timeout waiting for a bot request
