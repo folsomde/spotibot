@@ -1,1 +1,3 @@
 APItokens.json
+.cache
+__pycache__/
