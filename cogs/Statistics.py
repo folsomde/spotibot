@@ -23,15 +23,19 @@ class Statistics(commands.Cog, name='Statistics'):
         if user is not None:
             lasttime = self.bot.manager.parser.get_last_track_time(user.id)
             lasttrack = self.bot.manager.parser.get_last_track_id(user.id)
-            data = self.bot.manager.sp.get_track_info([lasttrack])['tracks'][0]
-            outline = ''
-            # outline += escape_markdown(user.display_name)
-            # outline += f' added\n'
-            outline += f'[' + escape_markdown(data['artists'][0]['name']) + ' / ' + escape_markdown(data['name']) + f']({data["external_urls"]["spotify"]})'
-            outline += f', added <t:{lasttime}:R>'
-            embed = discord.Embed(title=f"Last track from {user.display_name}", description=outline,
-                              url = self.bot.manager.get_playlist_link(), color=0x7289da)
-            embed.set_thumbnail(url=data['album']['images'][0]['url'])
+            if lasttrack is None:
+                embed = discord.Embed(title=f"Last track from {user.display_name}", description='No tracks found!',
+                                  url = self.bot.manager.get_playlist_link(), color=0x7289da)
+            else:
+                data = self.bot.manager.sp.get_track_info([lasttrack])['tracks'][0]
+                outline = ''
+                # outline += escape_markdown(user.display_name)
+                # outline += f' added\n'
+                outline += f'[' + escape_markdown(data['artists'][0]['name']) + ' / ' + escape_markdown(data['name']) + f']({data["external_urls"]["spotify"]})'
+                outline += f', added <t:{lasttime}:R>'
+                embed = discord.Embed(title=f"Last track from {user.display_name}", description=outline,
+                                  url = self.bot.manager.get_playlist_link(), color=0x7289da)
+                embed.set_thumbnail(url=data['album']['images'][0]['url'])
             await ctx.reply(embed=embed, ephemeral=(ctx.prefix == '/'))
             return
         # go into the meat of constructing the table
