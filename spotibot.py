@@ -2,7 +2,7 @@ import logging, argparse, json, time, asyncio, glob, os
 import discord
 from discord.ext import commands
 from Manager import Manager as man
-
+from cogs.HelpCommand import HelpCommand
 #--------------------------------------------------
 # SETUP: load in config files, etc.
 #--------------------------------------------------
@@ -17,8 +17,8 @@ parser.add_argument('--reload', action=argparse.BooleanOptionalAction, default=T
 args = parser.parse_args()
 
 if args.testing:
-	args.config = 'test_config.json'
-	args.verbosity = 1 if args.verbosity == 0 else args.verbosity
+    args.config = 'test_config.json'
+    args.verbosity = 1 if args.verbosity == 0 else args.verbosity
 
 # check verbosity
 verb = 0 if args.verbosity < 0 else 2 if args.verbosity > 2 else args.verbosity
@@ -27,31 +27,31 @@ logging.getLogger('SETUP').info(f'Log level set to {["WARNING", "INFO", "DEBUG"]
 
 # load in API tokens
 with open(args.tokens) as f:
-	tokens = json.load(f)
-	logging.getLogger('SETUP').info(f'Loaded tokens from {args.tokens}')
+    tokens = json.load(f)
+    logging.getLogger('SETUP').info(f'Loaded tokens from {args.tokens}')
 
 # load in bot configuration
 with open(args.config) as f:
-	config = json.load(f)
-	logging.getLogger('SETUP').info(f'Loaded config from {args.config}')
+    config = json.load(f)
+    logging.getLogger('SETUP').info(f'Loaded config from {args.config}')
 use_spotify = not (args.testing or not config['use_spotify']) 
 config['use_spotify'] = use_spotify
 logging.getLogger('SETUP').info('Using Spotify API' if use_spotify else 'Not using Spotify API')
 
 # see if we should grab the last playlist
 if args.reload:
-	list_of_files = glob.glob('playlist_data/*.json')
-	json_name = None if not len(list_of_files) else max(list_of_files, key=os.path.getctime)
+    list_of_files = glob.glob('playlist_data/*.json')
+    json_name = None if not len(list_of_files) else max(list_of_files, key=os.path.getctime)
 elif args.testing:
-	json_name = 'playlist_data/testing.json'
+    json_name = 'playlist_data/testing.json'
 else:
-	json_name = None
+    json_name = None
 
 #--------------------------------------------------
 # BOT
 #--------------------------------------------------
 
-intents = discord.Intents(guild_messages=True, guilds=False, guild_reactions=True, message_content=True)
+intents = discord.Intents(guild_messages=True, guilds=True, guild_reactions=True, message_content=True)
 bot = commands.Bot(command_prefix='!', intents=intents, owner_id=args.owner)
 bot.config = config
 bot.manager = man(config, tokens, json_name = json_name)
@@ -59,7 +59,7 @@ bot.manager = man(config, tokens, json_name = json_name)
 @bot.command()
 @commands.is_owner()
 async def sync(ctx: commands.Context) -> None:
-    """Sync commands"""
+    """Sync commands with Discord **[stellar only]**"""
     synced = await ctx.bot.tree.sync()
     print(synced)
     await ctx.send(f"Synced {len(synced)} commands globally")
@@ -67,11 +67,13 @@ async def sync(ctx: commands.Context) -> None:
 @bot.event
 async def on_ready():
     print('Ready!')
+    bot.help_command = HelpCommand()
+    
 
 async def main():
-	async with bot:
-		await bot.load_extension("cogs.PlaylistManagement")
-		await bot.load_extension("cogs.Statistics")
-		await bot.start(tokens['discord_token'])
+    async with bot:
+        await bot.load_extension("cogs.PlaylistManagement")
+        await bot.load_extension("cogs.Statistics")
+        await bot.start(tokens['discord_token'])
 
 asyncio.run(main())

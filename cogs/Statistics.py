@@ -18,6 +18,23 @@ class Statistics(commands.Cog, name='Statistics'):
 
     @commands.hybrid_command(name="lasttrack", description='Get the last track posted for each user (or someone in particular)', aliases=['lt'])
     async def lasttrack(self, ctx: commands.Context[commands.Bot], user: discord.User = None) -> None:
+        '''Get the last track posted for each user (or someone in particular)'''
+        # handle this easy case first
+        if user is not None:
+            lasttime = self.bot.manager.parser.get_last_track_time(user.id)
+            lasttrack = self.bot.manager.parser.get_last_track_id(user.id)
+            data = self.bot.manager.sp.get_track_info([lasttrack])['tracks'][0]
+            outline = ''
+            # outline += escape_markdown(user.display_name)
+            # outline += f' added\n'
+            outline += f'[' + escape_markdown(data['artists'][0]['name']) + ' / ' + escape_markdown(data['name']) + f']({data["external_urls"]["spotify"]})'
+            outline += f', added <t:{lasttime}:R>'
+            embed = discord.Embed(title=f"Last track from {user.display_name}", description=outline,
+                              url = self.bot.manager.get_playlist_link(), color=0x7289da)
+            embed.set_thumbnail(url=data['album']['images'][0]['url'])
+            await ctx.reply(embed=embed, ephemeral=(ctx.prefix == '/'))
+            return
+        # go into the meat of constructing the table
         senderid = ctx.author.id
         times = self.bot.manager.parser.get_all_last_track_times()
         urls = self.bot.manager.parser.get_all_last_track_ids()
@@ -56,6 +73,7 @@ class Statistics(commands.Cog, name='Statistics'):
 
     @commands.hybrid_command(name="leaderboard", description='See who has posted the most songs so far', aliases=['lb'])
     async def leaderboard(self, ctx: commands.Context[commands.Bot]) -> None:
+        '''See who has posted the most songs so far'''
         senderid = ctx.author.id
         counts = self.bot.manager.parser.get_all_track_counts()
         total_count = sum(cts for cts in counts.values())
@@ -93,6 +111,7 @@ class Statistics(commands.Cog, name='Statistics'):
 
     @commands.hybrid_command(name="random", description='Get a random song from the playlist (optionally specifying a user)', aliases=['r'])
     async def get_random_song(self, ctx: commands.Context[commands.Bot], user: discord.User = None) -> None:
+        '''Get a random song from the playlist (optionally specifying a user)'''
         tracks = self.bot.manager.parser.get_all_tracks()
         songbank = []
         if user is None:

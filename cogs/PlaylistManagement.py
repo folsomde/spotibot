@@ -32,6 +32,7 @@ class PlaylistManagement(commands.Cog, name='Playlist management'):
 
     @app_commands.command(name='add', description='Add a Spotify track to the playlist')
     async def add(self, inter: discord.Interaction, spotify_url: str) -> None:
+        '''Add a Spotify track to the playlist [slash command only]'''
         if 'open.spotify.com/track/' in spotify_url:
             track_added = self.bot.manager.add_to_playlist(inter.user.id, spotify_url)
             if track_added:
@@ -44,6 +45,7 @@ class PlaylistManagement(commands.Cog, name='Playlist management'):
     @commands.command(name='new_playlist', description='Switch to a new playlist')
     @commands.is_owner()
     async def new_playlist(self, ctx: commands.Context, spotify_url: str = None) -> None:
+        '''Force the bot to create/swap to a new playlist **[stellar only]**'''
         if spotify_url is None:
             self.bot.manager.swap_to_new_playlist()
             await ctx.reply(f'New playlist created, check it out: {self.bot.manager.get_playlist_link()}', ephemeral=True)
@@ -66,6 +68,7 @@ class PlaylistManagement(commands.Cog, name='Playlist management'):
 
     @commands.hybrid_command(name="playlist", description='Get the current playlist', aliases=['p','pl'])
     async def get_playlist(self, ctx: commands.Context[commands.Bot]) -> None:
+        '''Get the current playlist'''
         await ctx.reply(f'Current playlist URL: {self.bot.manager.get_playlist_link()}', ephemeral=(ctx.prefix == '/'))
 
     @commands.Cog.listener()
