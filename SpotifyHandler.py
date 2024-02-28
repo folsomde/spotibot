@@ -21,11 +21,10 @@ class SpotifyHandler:
 	def get_playlist(self) -> str:
 		return 'https://open.spotify.com/playlist/' + str(self.playlist)
 
-	def add(self, tracks: str, position: int = None, playlist: str = None) -> None:
-		if playlist is None:
-			playlist = self.playlist
-		log.info(f'Adding {tracks} to playlist {playlist} at position {position}')
-		self.spotify.playlist_add_items(self.playlist, [tracks], position)
+	def add(self, tracks: str) -> None:
+		playlist = self.playlist
+		log.info(f'Adding {tracks} to playlist {playlist}')
+		self.spotify.playlist_add_items(self.playlist, [tracks])
 
 	def remove(self, tracks: str, playlist: str = None) -> None:
 		if playlist is None:
@@ -56,8 +55,8 @@ class Dummy:
 	def get_playlist(self) -> str:
 		return 'http://localhost:5000'
 
-	def add(self, tracks: str, position: int = None, playlist: str = None) -> None:
-		log.info(f'Adding {tracks} to playlist {playlist} at position {position}')
+	def add(self, tracks: str) -> None:
+		log.info(f'Adding {tracks} to playlist')
 		pass
 
 	def remove_by_name(self, tracks: str, playlist: str = None) -> None:
