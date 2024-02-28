@@ -2,7 +2,7 @@ from discord.ext import commands, tasks
 from discord import app_commands
 import discord
 from urlextract import URLExtract
-import datetime, time, logging
+import datetime, time, logging, queue
 
 log = logging.getLogger('playlist')
 
@@ -14,12 +14,20 @@ times = [
     datetime.time(hour=8, minute=30, tzinfo=utc),
 ]
 
+# ids and commands for other bots who get spotify links
+# will wait 5 seconds and capture the first bot-posted spotify link
+# and associate it with whomever last did one of these commands
+spotify_bot_ids = [356268235697553409, 128822128072982528] 
+spotify_bot_commands = ['.s', '.spotify',]
 
 class PlaylistManagement(commands.Cog, name='Playlist management'):
     def __init__(self, bot):
         self.bot = bot
         self.re = URLExtract()
         self.check_for_playlist_update.start()
+        # handles the use of other bots
+        self.command_waiting = queue.SimpleQueue() # queue the IDs of users waiting for bot
+        self.waiting_tasks = [] # holds task which will kill queue entry on timeout
         log.info('Cog loaded')
 
     @app_commands.command(name='add', description='Add a Spotify track to the playlist')
@@ -64,10 +72,19 @@ class PlaylistManagement(commands.Cog, name='Playlist management'):
     async def on_message(self, message):
         channel = message.channel
         if channel.id == self.bot.config['watch_channel']:
+            if message.content.split(' ')[0] in spotify_bot_commands:
+                self.command_waiting.put(message.author.id)
+                self.start_waiting()
+                return # ignore commands for other bots
             i = 0
             for url in self.re.gen_urls(message.content):
                 if 'open.spotify.com/track/' in url:
-                    track_added = self.bot.manager.add_to_playlist(message.author.id, url)
+                    if (message.author.id in spotify_bot_ids) and (not self.command_waiting.empty()):
+                        self.waiting_tasks[0].cancel()
+                        logged_id = self.command_waiting.get_nowait()
+                    else:
+                        logged_id = message.author.id
+                    track_added = self.bot.manager.add_to_playlist(logged_id, url)
                     # can do something with this bool if needed
 
     @tasks.loop(time=times)
@@ -87,5 +104,30 @@ class PlaylistManagement(commands.Cog, name='Playlist management'):
             newlink = self.bot.manager.get_playlist_link()
             await channel.send(f'🎉 **NEW PLAYLIST TIME!!!** Check out the old one [here](<{oldlink}>), new songs will be added to {newlink}')
 
+    def start_waiting(self): # spawns a task which monitors for timeouts
+        new_task = tasks.loop(seconds=5, count=1)(self.wait_to_pop_queue)
+        new_task.after_loop(self.clear_waiting)
+        new_task.start()
+        self.waiting_tasks.append(new_task)
+
+    async def wait_to_pop_queue(self):
+        # this runs immediately as a spotify command is called
+        log.debug(f'Waiting for other bot, queue length = {self.command_waiting.qsize()}, {len(self.waiting_tasks)} tasks pending')
+
+    async def clear_waiting(self): 
+        # don't pop if we successfully popped above
+        if self.waiting_tasks[0].is_being_cancelled():
+            log.debug('Timeout canceled, link found')
+            del self.waiting_tasks[0]
+            return
+        # remove from the queue if we timeout waiting for a bot request
+        if not self.command_waiting.empty():
+            deleting = self.command_waiting.get_nowait()
+            log.warning(f'Timeout, {deleting} from queue')
+        else:
+            log.error('Timeout requested but queue empty')
+        del self.waiting_tasks[0]
+
 async def setup(bot):
     await bot.add_cog(PlaylistManagement(bot))
+
