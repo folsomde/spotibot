@@ -42,6 +42,8 @@ logging.getLogger('SETUP').info('Using Spotify API' if use_spotify else 'Not usi
 if args.reload:
 	list_of_files = glob.glob('playlist_data/*.json')
 	json_name = None if not len(list_of_files) else max(list_of_files, key=os.path.getctime)
+elif args.testing:
+	json_name = 'playlist_data/testing.json'
 else:
 	json_name = None
 
